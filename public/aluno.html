@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Aluno - Compartilhar Tela</title>
+</head>
+<body>
+  <h2>Entrar na aula</h2>
+  <input id="nome" placeholder="Seu nome" />
+  <input id="sala" placeholder="Código da sala (ex: 8A)" />
+  <button id="entrar">Entrar e compartilhar tela</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    document.getElementById('entrar').onclick = async () => {
+      const nome = document.getElementById('nome').value.trim();
+      const sala = document.getElementById('sala').value.trim();
+      if (!nome || !sala) {
+        alert('Digite seu nome e o código da sala!');
+        return;
+      }
+
+      // avisa ao servidor que entrou na sala
+      socket.emit('joinRoom', { sala, aluno: nome });
+
+      try {
+        // pede permissão e compartilha a tela (consentimento do navegador)
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        await video.play();
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // loop de captura (15s)
+        setInterval(() => {
+          // define tamanho compacto (thumbnail)
+          const w = 400;
+          const h = Math.round((video.videoHeight / video.videoWidth) * w) || 300;
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(video, 0, 0, w, h);
+          const frame = canvas.toDataURL('image/jpeg', 0.6);
+          socket.emit('frame', { sala, nome, frame, ts: Date.now() });
+        }, 15000); // 15000ms = 15s
+
+      } catch (err) {
+        alert('Erro ou permissão negada ao compartilhar a tela.');
+        console.error(err);
+      }
+    };
+  </script>
+</body>
+</html>
