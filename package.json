@@ -1,0 +1,13 @@
+{
+  "name": "monitor-aula",
+  "version": "1.0.0",
+  "description": "Monitoramento simples de telas em sala de aula (via thumbnails)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
