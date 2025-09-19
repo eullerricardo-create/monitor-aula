@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Professor - Painel</title>
+  <style>
+    .card { display:inline-block; margin:8px; border:1px solid #ccc; padding:8px; text-align:center; }
+    .card img { width:200px; height:auto; display:block; }
+  </style>
+</head>
+<body>
+  <h2>Painel do Professor</h2>
+  <input id="sala" placeholder="Código da sala (ex: 8A)" />
+  <button id="abrir">Abrir sala</button>
+  <button id="encerrar">Encerrar (sair)</button>
+  <div id="grid"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const grid = document.getElementById('grid');
+    let salaAtual = null;
+    const alunos = {};
+
+    document.getElementById('abrir').onclick = () => {
+      const sala = document.getElementById('sala').value.trim();
+      if (!sala) { alert('Digite o código da sala'); return; }
+      salaAtual = sala;
+      socket.emit('joinRoom', { sala, aluno: 'PROFESSOR' });
+      grid.innerHTML = '';
+      Object.keys(alunos).forEach(k => delete alunos[k]);
+    };
+
+    document.getElementById('encerrar').onclick = () => {
+      if (!salaAtual) return;
+      salaAtual = null;
+      grid.innerHTML = '';
+    };
+
+    socket.on('frame', (data) => {
+      // se servidor já está enviando por sala, provavelmente sempre é da sala atual
+      if (salaAtual && data.sala !== salaAtual) return;
+
+      const nome = data.nome || data.aluno || 'Aluno';
+      if (!alunos[nome]) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.id = 'card-' + nome;
+        div.innerHTML = `<div><strong>${nome}</strong></div><img id="img-${nome}"><div id="ts-${nome}"></div>`;
+        grid.appendChild(div);
+        alunos[nome] = true;
+      }
+      const imgEl = document.getElementById('img-' + nome);
+      if (imgEl) imgEl.src = data.frame;
+      const tsEl = document.getElementById('ts-' + nome);
+      if (tsEl) tsEl.innerText = new Date(data.ts).toLocaleTimeString();
+    });
+
+    socket.on('alunoEntrou', ({ aluno }) => {
+      // opcional: notificar professor
+      console.log('Aluno entrou:', aluno);
+    });
+
+    socket.on('alunoSaiu', ({ aluno }) => {
+      // opcional: remover do grid
+      const el = document.getElementById('card-' + aluno);
+      if (el) el.remove();
+    });
+  </script>
+</body>
+</html>
